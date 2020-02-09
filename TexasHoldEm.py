@@ -1,4 +1,34 @@
 import random
+import uuid
+
+class Main:
+    MAXGAMEPLAYERS = 8
+    active = 0
+
+    def __init__(self):
+        self.games = []
+        self.active = 1
+
+    def getMain(self):
+        return self
+
+    def createGame(self):
+        game = Game()
+        self.games.append(game)
+
+    def createGameAndAddPlayer(self, player):
+        game = Game()
+        self.games.append(game)
+        game.addPlayer(player)
+        print('You are playing in game %d', game.gameId)
+
+    def removeGame(self, game):
+        self.games.remove(game)
+
+    def mergeGames(self):
+        pass
+
+
 
 class Deck:
 
@@ -23,25 +53,49 @@ class Deck:
 
 class Player():
     def __init__(self, name):
+        self.playerid = uuid.uuid1()
         self.name = name
         self.chips = 1000
         self.hand = []
+        self.game = 0
 
+
+    def __str__(self):
+        return str(self.name) + str(self.chips)
+
+    def getPlayerName(self):
+        return self.name
+
+    def getGame(self):
+        return self.game
 
     def addCardtoHand(self, card):
         self.hand.append(card)
+
+    def resetHand(self):
+        self.hand = []
+
+    def getPlayerID(self):
+        return self.playerid
+
 
 
 class Game():
     def __init__(self):
         self.players = []
-
+        self.gameId = uuid.uuid1()
 
     def addPlayer(self, player):
         self.players.append(player)
+        player.game = self
 
     def getPlayers(self):
-        return self.players
+        return str(self.players)
+
+    def getGameId(self):
+        return self.gameId
+
+
 
 class Hand():
 
@@ -67,8 +121,21 @@ class Hand():
         self.table.append(self.deck.pop())
         self.table.append(self.deck.pop())
 
+    def dealTurn(self):
+        self.table.append(self.deck.pop())
+
+    def dealFlop(self):
+        self.table.append(self.deck.pop())
+
+    def reset(self):
+        for player in self.game.players:
+            player.resetHand()
+
+    def getWinner(self):
+        pass
 
 
+'''
 game1 = Game()
 
 player1 = Player('Ross')
@@ -86,7 +153,7 @@ print('player1.hand', player1.hand)
 print('player2.hand', player2.hand)
 print('hand1.table', hand1.table)
 print('hand1.deck', hand1.deck)
-
+'''
 
 
 
