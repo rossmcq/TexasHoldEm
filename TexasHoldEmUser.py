@@ -1,75 +1,69 @@
-from TexasHoldEm import Hand
+'''from TexasHoldEm import Hand
 from TexasHoldEm import Game
 from TexasHoldEm import Player
-from TexasHoldEm import Main
+from TexasHoldEm import Main'''
+import socket
+import sys
+import pickle
 
 def main():
     if input('Do you want to join a game of Texas Hold Em? [Y/N]') == 'Y':
+        HEADERSIZE = 10
+
+        # Create a TCP/IP socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        # Connect the socket to the port where the server is listening
+        server_address = ('localhost', 12121)
+        print('connecting to %s port %s' % server_address)
+        sock.connect(server_address)
+
         #Create player
-        newPlayer = Player(input('What is your name?'))
+        newPlayer = input('What is your name?')
 
-        if Main.active == 0:
-            main = Main()
-        else:
-            main = Main.getMain()
+        try:
 
-        #If Game not exists then create game
-        if len(main.games) == 0:
-            main.createGameAndAddPlayer(newPlayer)
-        #Else check if games are full
-        else:
-            gamesFull = 1
-            for game in main.games:
-                if game.getPlayers < main.MAXGAMEPLAYERS:
-                    game.addPlayer(newPlayer)
-                    print('You are playing in game %d', game.getGameId())
-                    gamesFull = 0
-                    break
+            # Send data
+            message = 'This is the message.  It will be repeated.'
+            print('sending Player name "%s"' % newPlayer)
+            sock.sendall(newPlayer.encode('utf-8'))
 
-            #If games full then create new game and add player
-            if gamesFull == 1:
-                newGame = main.createGameAndAddPlayer(newPlayer)
+            while True:
+                full_data = b''
+                new_data = True
 
-        while(len(main.games) > 0):
-            playGame(newPlayer)
+                while True:
+                    data = sock.recv(16)
+                    if new_data:
+                        print('received "%s"' % data)
+                        print(f'new message length: {data[:HEADERSIZE]}')
+                        datalen = int(data[:HEADERSIZE])
+                        new_data = False
 
+                    full_data += data
+
+                    if len(full_data) - HEADERSIZE == datalen:
+                        print('Full object recieved')
+                        print(full_data[HEADERSIZE:])
+
+                        d = pickle.loads(full_data[HEADERSIZE:])
+                        print('You are playing in game ', d)
+
+                        new_data = True
+                        full_data = b''
+
+                    print('Your Player Profile is: ', full_data)
+
+        finally:
+            print('closing socket')
+            sock.close()
+
+#        while(len(pokerEngine.games) > 0):
+#            newPlayer.joinGame()
     else:
         print('OK Bye!')
 
 
-#TODO: Move below logic to Hand method.
-def playGame(player):
-    game = player.getGame()
-    hand = Hand(game)
-
-    print('Players in this game ', game.getPlayers())
-
-    hand.dealPlayers()
-    print('player.hand', player.hand)
-    takeBets(hand, player)
-    hand.dealRiver()
-    print('hand.table - River', hand.table)
-    takeBets(hand, player)
-    hand.dealTurn()
-    print('hand.table - Turn', hand.table)
-    takeBets(hand, player)
-    hand.dealFlop()
-    print('hand.table - Flop', hand.table)
-    takeBets(hand, player)
-    hand.reset()
-
-    print('player.hand - after reset', player.hand)
-    print('hand.table', hand.table)
-    print('hand.deck', hand.deck)
-
-def takeBets(hand, playerCurrent):
-    for player in hand.game.players:
-        if player.getPlayerID() == playerCurrent.getPlayerID():
-            requestAction(player)
-
-#TODO only request for the player that joined on this logic
-def requestAction(player):
-    input('Do you want to [R]aise, [C]all or [F]lop?')
 
 
 
