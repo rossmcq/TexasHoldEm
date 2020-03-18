@@ -3,29 +3,97 @@ import uuid
 import time
 import sys
 import socket
+import select
 import pickle
 
-def main():
-    HEADERSIZE = 10
+HEADERLENGTH = 10
+IP = "127.0.0.1"
+PORT = 12121
 
+def main():
     #start poker engine
     pokerEngine = Main()
 
     # Create a TCP/IP socket
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-    # Bind the socket to the port
-    server_address = ('localhost', 12121)
-    print('starting up on %s port %s' % server_address)
-    sock.bind(server_address)
+    #Bind to port on IP, leave IP blank to allow
+    #connections from other local computers
+    server_socket.bind((IP, PORT))
+    server_socket.listen(20)
+
+    sockets_list = [server_socket]
+
+    clients = {}
+
+    print('starting up on %s port %s' % (IP, PORT))
 
     # Listen for incoming connections
-    sock.listen(1)
 
     while True:
         # Wait for a connection
         print('waiting for a connection')
-        connection, client_address = sock.accept()
+        read_sockets, _, exception_sockets = select.select(sockets_list, [], sockets_list)
+
+        for notified_socket in read_sockets:
+            if notified_socket == server_socket:
+                client_socket, client_address = server_socket.accept()
+
+                user = recieve_message(client_socket)
+
+                if user is False:
+                    continue
+
+                sockets_list.append(client_socket)
+
+                clients[client_socket] = user
+
+                player = Player(user['data'].decode('utf-8'))
+                gameID = pokerEngine.addPlayerToRandomGame(player)
+                print(f"Accepted new connection from {client_address[0]}:{client_address[1]} username:{user['data'].decode('utf-8')} Adding them to game {gameID}")
+
+                client_socket.send(str(gameID).encode('utf-8'))
+
+            else:
+                message = recieve_message(notified_socket)
+
+                ##logic to send messsage to game
+
+                if message is False:
+                    print(f"Closed connection from  {clients[notified_socket]['data'].decode('utf-8')}")
+                    sockets_list.remove(notified_socket)
+                    del clients[notified_socket]
+                    continue
+
+                user = clients[notified_socket]
+                print(f"Recieved message from {user['data'].decode('utf-8')}: {message['data'].decode('utf-8')}")
+
+                #sends to all but sender
+                for client_socket in clients:
+                    if client_socket != notified_socket:
+                        client_socket.send(user['header'] + user['data'] + message['header'] + message['data'])
+
+            for notified_socket in exception_sockets:
+                sockets_list.remove(notified_socket)
+                del clients[notified_socket]
+
+
+def recieve_message(client_socket):
+    try:
+        message_header = client_socket.recv(HEADERLENGTH)
+
+        if not len(message_header):
+            return False
+
+        message_length = int(message_header.decode("utf-8"))
+        return {"header": message_header, "data": client_socket.recv(message_length)}
+
+    except Exception as e:
+        print("General Error: ", e)
+        return False
+
+'''     
         try:
             print('connection from', client_address)
 
@@ -50,7 +118,7 @@ def main():
         finally:
             # Clean up the connection
             connection.close()
-
+'''
 
 class Main:
     MAXGAMEPLAYERS = 8
@@ -67,6 +135,7 @@ class Main:
         game = Game()
         self.games.append(game)
 
+    #Returns Gameid which player was added to
     def addPlayerToRandomGame(self, player):
         #If no games currently in play then create one
         if len(self.games) == 0:
@@ -168,7 +237,7 @@ class Game():
         player.game = self
 
     def getPlayers(self):
-        return str(self.players)
+        return self.players
 
     def getGameId(self):
         return self.gameId

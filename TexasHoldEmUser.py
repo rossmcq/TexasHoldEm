@@ -1,62 +1,63 @@
-'''from TexasHoldEm import Hand
-from TexasHoldEm import Game
-from TexasHoldEm import Player
-from TexasHoldEm import Main'''
 import socket
+import select
+import errno
 import sys
-import pickle
+
+HEADERLENGTH = 10
+IP = "127.0.0.1"
+PORT = 12121
 
 def main():
     if input('Do you want to join a game of Texas Hold Em? [Y/N]') == 'Y':
-        HEADERSIZE = 10
 
-        # Create a TCP/IP socket
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        # Connect the socket to the port where the server is listening
-        server_address = ('localhost', 12121)
-        print('connecting to %s port %s' % server_address)
-        sock.connect(server_address)
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect((IP, PORT))
+        #client_socket.setblocking(False)
 
         #Create player
         newPlayer = input('What is your name?')
+        username = newPlayer.encode('utf-8')
+        username_header = f"{len(username):<{HEADERLENGTH}}".encode('utf-8')
+        client_socket.send(username_header + username)
+
 
         try:
 
-            # Send data
-            message = 'This is the message.  It will be repeated.'
-            print('sending Player name "%s"' % newPlayer)
-            sock.sendall(newPlayer.encode('utf-8'))
-
             while True:
-                full_data = b''
-                new_data = True
+                # receive things
+                returnmessage = client_socket.recv(36)
+                if not len(returnmessage):
+                    print("connection closed by server")
+                    sys.exit()
 
-                while True:
-                    data = sock.recv(16)
-                    if new_data:
-                        print('received "%s"' % data)
-                        print(f'new message length: {data[:HEADERSIZE]}')
-                        datalen = int(data[:HEADERSIZE])
-                        new_data = False
+                print(returnmessage.decode('utf-8'))
+                '''
+                username_length = int(username_header.decode("utf-8"))
+                username = client_socket.recv(username_length).decode('utf-8')
 
-                    full_data += data
+                message_header = client_socket.recv((HEADERLENGTH))
+                message_length = int(message_header.decode('utf-8').strip())
+                message = client_socket.recv(message_length).decode('utf-8')
 
-                    if len(full_data) - HEADERSIZE == datalen:
-                        print('Full object recieved')
-                        print(full_data[HEADERSIZE:])
+                print(f"{username} > {message}")
+                '''
+                #print('Your Player Profile is: ', full_data)
 
-                        d = pickle.loads(full_data[HEADERSIZE:])
-                        print('You are playing in game ', d)
 
-                        new_data = True
-                        full_data = b''
+        except IOError as e:
 
-                    print('Your Player Profile is: ', full_data)
+            if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
+                print('reading error ', str(e))
 
-        finally:
-            print('closing socket')
-            sock.close()
+                sys.exit()
+
+
+
+        except Exception as e:
+
+            print('General error', str(e))
+
+            sys.exit()
 
 #        while(len(pokerEngine.games) > 0):
 #            newPlayer.joinGame()
