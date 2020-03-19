@@ -8,5 +8,5 @@ Needs some work, just getting started!
 
 #TODO:
 1) Return GameID to user
-2) Kick of seperate games on different thread
+2) Kick of seperate games on different process
 3) UI?
