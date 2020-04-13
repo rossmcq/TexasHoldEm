@@ -1,14 +1,18 @@
 import random
 import uuid
 import time
-import sys
 import socket
 import select
-import pickle
+from collections import deque
+from _thread import *
+from multiprocessing import Process
 
 HEADERLENGTH = 10
 IP = "127.0.0.1"
 PORT = 12121
+
+numbers = ('2','3','4','5','6','7','8','9','10','J','Q','K','A')
+suits = ('♥', '♠', '♦', '♣')
 
 def main():
     #start poker engine
@@ -49,30 +53,36 @@ def main():
 
                 clients[client_socket] = user
 
-                player = Player(user['data'].decode('utf-8'))
-                gameID = pokerEngine.addPlayerToRandomGame(player)
-                print(f"Accepted new connection from {client_address[0]}:{client_address[1]} username:{user['data'].decode('utf-8')} Adding them to game {gameID}")
+                player = Player(user['data'].decode('utf-8'), client_socket)
+                gameID = pokerEngine.add_player_to_random_game(player)
+                print(f"Accepted new connection from {client_address[0]}:{client_address[1]} username:{user['data'].decode('utf-8')} Adding them to game on thread {gameID}")
 
-                client_socket.send(str(gameID).encode('utf-8'))
+
 
             else:
                 message = recieve_message(notified_socket)
 
-                ##logic to send messsage to game
-
                 if message is False:
                     print(f"Closed connection from  {clients[notified_socket]['data'].decode('utf-8')}")
                     sockets_list.remove(notified_socket)
+                    pokerEngine.remove_player(notified_socket)
                     del clients[notified_socket]
                     continue
 
                 user = clients[notified_socket]
-                print(f"Recieved message from {user['data'].decode('utf-8')}: {message['data'].decode('utf-8')}")
+                print(f"Received message from {user['data'].decode('utf-8')}: {message['data'].decode('utf-8')}")
 
+                for game in pokerEngine.games:
+                    for player in game.players:
+                        if player.player_socket == notified_socket:
+                            player.action = message['data'].decode('utf-8')
+
+                '''
                 #sends to all but sender
                 for client_socket in clients:
                     if client_socket != notified_socket:
                         client_socket.send(user['header'] + user['data'] + message['header'] + message['data'])
+                '''
 
             for notified_socket in exception_sockets:
                 sockets_list.remove(notified_socket)
@@ -120,6 +130,7 @@ def recieve_message(client_socket):
             connection.close()
 '''
 
+
 class Main:
     MAXGAMEPLAYERS = 8
     active = 0
@@ -128,57 +139,81 @@ class Main:
         self.games = []
         self.active = 1
 
-    def getMain(self):
-        return self
-
-    def createGame(self):
-        game = Game()
-        self.games.append(game)
-
     #Returns Gameid which player was added to
-    def addPlayerToRandomGame(self, player):
+    def add_player_to_random_game(self, player):
         #If no games currently in play then create one
         if len(self.games) == 0:
-            return self.createGameAndAddPlayer(player)
+            return start_new_thread(self.create_game_and_add_player, (player, ))
         # Else check if games are full
         else:
             gamesFull = 1
             for game in self.games:
-                if len(game.getPlayers()) < self.MAXGAMEPLAYERS:
-                    game.addPlayer(player)
-                    print('You are playing in game %d', game.getGameId())
+                if len(game.get_players()) < self.MAXGAMEPLAYERS:
+                    game.add_player(player)
+                    print('You are playing in game %d', game.get_game_id())
                     gamesFull = 0
-                    return game.getGameId()
+                    return game.get_game_id()
 
             # If games full then create new game and add player
             if gamesFull == 1:
-                return self.createGameAndAddPlayer(player)
+                return start_new_thread(self.create_game_and_add_player, (player, ))
 
-    def createGameAndAddPlayer(self, player):
+    def create_game_and_add_player(self, player):
         game = Game()
         self.games.append(game)
-        game.addPlayer(player)
-        return game.gameId
+        game.add_player(player)
+        game.play_game()
 
-    def removeGame(self, game):
+    def remove_player(self, socket_remove):
+        for game in self.games:
+            for player in game.players:
+                if player.player_socket == socket_remove:
+                    game.remove_player(player)
+
+    def remove_game(self, game):
         self.games.remove(game)
 
-    def mergeGames(self):
+    def merge_games(self):
         pass
 
+
+class Card:
+    def __init__(self):
+        self.rank = -1
+
+    def __init__(self, number, suit):
+        if number in numbers and suit in suits:
+            self.number = number
+            self.suit = suit
+            self.rank = numbers.index(number)
+            self.card = (number, suit)
+        elif number == '-1' and suit == '-1':
+            #Dummy card
+            self.rank = -1
+        else:
+            raise Exception('Card not a standard playing card!')
+
+    def __str__(self):
+        return str(self.card)
+
+    def __eq__(self, other):
+        return self.rank == other.rank
+
+    def __lt__(self, other):
+        return self.rank < other.rank
+
+    def __gt__(self, other):
+        return self.rank > other.rank
 
 
 class Deck:
 
     def __init__(self):
-        numbers = ['A','K','Q','J','10','9','8','7','6','5','4','3','2']
-        suits = ['♥','♠','♦','♣']
-
         self.deck = []
 
         for number in numbers:
             for suit in suits:
-                self.deck.append((number, suit))
+                self.deck.append(Card(number, suit))
 
         random.shuffle(self.deck)
 
@@ -189,136 +224,265 @@ class Deck:
         return self.deck.pop()
 
 
-class Player():
-    def __init__(self, name):
+class Player:
+    def __init__(self, name, player_socket):
         self.playerid = uuid.uuid1()
+        self.player_socket = player_socket
         self.name = name
         self.chips = 1000
         self.hand = []
         self.game = 0
-
+        self.timeout = 0
+        self.action = 'u'
+        self.currentStake = 0
 
     def __str__(self):
-        return str(self.name) + str(self.chips)
+        return f'{self.name} {str(self.chips)}'
 
-    def getPlayerName(self):
+    def get_player_name(self):
         return self.name
 
-    def getGame(self):
+    def get_game(self):
         return self.game
 
-    def addCardtoHand(self, card):
-        self.hand.append(card)
+    def send_msg_to_player(self, msg):
+        try:
+            self.player_socket.send(msg.encode('utf-8'))
+        except ConnectionResetError as e:
+            print('Player disconnected still pending remove')
+            print(e)
 
-    def resetHand(self):
+    def add_card_to_hand(self, card):
+        self.hand.append(card)
+        self.send_msg_to_player(str(card))
+
+    def reset_hand(self):
         self.hand = []
 
-    def getPlayerID(self):
-        return self.playerid
+    def take_bet(self):
+        self.send_msg_to_player('Do you want to [R]aise, [C]all or [F]lop?')
+        self.action = 'u'
+        self.timeout = 20
 
-    def joinGame(self):
-        if self.game.gameInPlay == 1:
-            print('Game currently in progress please wait...')
-            while self.game.gameInPlay == 1:
-                time.sleep(1)
-        self.game.playGame(self)
+        while self.timeout > 0 and self.action == 'u':
+            time.sleep(1)
+            self.timeout -= 1
 
-    def takeBet(self):
-        input('Do you want to [R]aise, [C]all or [F]lop?')
+        if self.timeout == 0:
+            print(f'{self.name} timed out!')
+            self.fold()
+        elif self.action.lower() == 'f':
+            self.fold()
+        elif self.action.lower() == 'c':
+            self.call()
+        elif self.action.lower() == 'r':
+            self.raise_hand()
+        elif self.action is int:
+            self.raise_hand(self.action)
+        else:
+            raise Exception('Unhandled player action!')
 
-class Game():
+    def fold(self):
+        self.game.player_fold(self)
+
+    def call(self):
+        self.game.player_call(self)
+
+    def raise_hand(self, chips):
+        self.chips -= chips
+        self.game.player_raise(self, chips)
+
+
+class Game:
     def __init__(self):
         self.players = []
         self.gameId = uuid.uuid1()
         self.gameInPlay = 0
+        self.buttonPlayerIndex = 0
+        self.activePlayers = []
+        self.currentPot = 0
+        self.started = 0
+        self.handNumber = 0
+        self.blind_amount = 20
+        self.minimumStake = self.blind_amount
 
-    def addPlayer(self, player):
+    def add_player(self, player):
         self.players.append(player)
         player.game = self
+        player.player_socket.send(str("GAMEID: " + str(self.gameId)).encode('utf-8'))
 
-    def getPlayers(self):
+        if self.gameInPlay == 1:
+            player.player_socket.send(str("Game In Play please wait until next round starts!").encode('utf-8'))
+
+    def remove_player(self, player):
+        self.players.remove(player)
+
+    def get_players(self):
         return self.players
 
-    def getGameId(self):
+    def get_active_players(self):
+        return self.activePlayers
+
+    def get_game_id(self):
         return self.gameId
 
-    def playGame(self, player):
-        self.gameInPlay = 1
-        hand = Hand(self)
+    def send_msg_to_all_players(self, msg):
+        [player.send_msg_to_player(msg) for player in self.players]
 
-        print('Players in this game ', self.getPlayers())
+    def player_fold(self, player):
+        self.activePlayers.remove(player)
+        self.send_msg_to_all_players(f'{player} folded')
 
-        hand.dealPlayers()
-        print('player.hand', player.hand)
-        self.takeBets(hand)
-        hand.dealRiver()
-        print('hand.table - River', hand.table)
-        self.takeBets(hand)
-        '''
-        hand.dealTurn()
-        print('hand.table - Turn', hand.table)
-        self.takeBets(hand)
-        hand.dealFlop()
-        print('hand.table - Flop', hand.table)
-        self.takeBets(hand)
-        '''
-        #reset players hands
-        hand.reset()
+    def player_call(self, player):
+        self.send_msg_to_all_players(f'{player} called')
 
-        print('player.hand - after reset', player.hand)
-        print('**NEW GAME**')
+    def player_raise(self, player, amount):
+        self.send_msg_to_all_players(f'{player} raised {amount}')
 
-        self.gameInPlay = 0
+    def take_blinds(self):
+        self.players[(self.buttonPlayerIndex + 1) % len(self.players)].chips -= int(self.blind_amount * 0.5)
+
+        self.players[(self.buttonPlayerIndex + 2) % len(self.players)].chips -= self.blind_amount
+
+        self.currentPot += int(self.blind_amount * 1.5)
+
+    def play_game(self):
+        while True:
+            while len(self.players) < 2:
+                self.send_msg_to_all_players(f'You are the only player in the game, waiting for others to join...')
+                time.sleep(4)
+
+            while len(self.players) >= 2:
+                self.send_msg_to_all_players(f'Waiting for players to join game...')
+                time.sleep(3)
+                self.handNumber += 1
+                print(f'Hand number {self.handNumber}')
+                self.send_msg_to_all_players(f'Hand number {self.handNumber}')
+                self.gameInPlay = 1
+
+                self.take_blinds()
+
+                # Rotate players
+                self.activePlayers = deque(self.players)
+                self.activePlayers.rotate(-(1 + self.buttonPlayerIndex))
+                hand = Hand(self)
+
+                #Tell players whose in this round
+                game_players = ''
+                for player in self.get_players():
+                    if player == self.get_players()[self.buttonPlayerIndex]:
+                        game_players += str(player) + ' BUTTON\n'
+                    elif player == self.get_players()[(self.buttonPlayerIndex + 1) % len(self.get_players())]:
+                        game_players += str(player) + ' SMALL BLIND\n'
+                    elif player == self.get_players()[(self.buttonPlayerIndex + 2) % len(self.get_players())]:
+                        game_players += str(player) + ' BIG BLIND\n'
+
+                print(f'Players in this game: \n{game_players}')
+                self.send_msg_to_all_players(game_players)
+
+                hand.deal_players()
+
+                self.take_bets()
+
+                if self.gameInPlay:
+                    hand.deal_river()
+                    self.send_msg_to_all_players(f'River - {[(card.number, card.suit) for card in hand.table]}')
+                    self.take_bets()
+
+                    if self.gameInPlay:
+                        hand.deal_turn()
+                        self.send_msg_to_all_players(f'Turn - {[(card.number, card.suit) for card in hand.table]}')
+                        self.take_bets()
+
+                        if self.gameInPlay:
+                            hand.deal_flop()
+                            self.send_msg_to_all_players(f'Flop - {[(card.number, card.suit) for card in hand.table]}')
+                            self.take_bets()
+
+                            if self.gameInPlay:
+                                hand_winner = self.calc_hand_winner()
+                                self.hand_winner(hand_winner)
+
+                # reset players hands
+                hand.reset()
+
+                # move button player on
+                self.buttonPlayerIndex = (self.buttonPlayerIndex + 1) % len(self.get_players())
+
+                # print('player.hand - after reset', player.hand)
+                print('**END OF HAND**')
+
+    def take_bets(self):
+        time.sleep(0.5)
+        self.send_msg_to_all_players('POT: ' + str(self.currentPot))
+        for player in self.activePlayers.copy():
+            player.take_bet()
+            if len(self.activePlayers) == 1:
+                self.hand_winner([self.activePlayers[0]])
+                self.gameInPlay = 0
+                break
 
 
-    def takeBets(self, hand):
-        for player in hand.game.players:
-            player.takeBet()
+    def calc_hand_winner(self):
+        # For now set player with the highest card to be winner
+        highest_card = Card('-1', '-1')
+        winning_player = []
+        for player in self.players:
+            for card in player.hand:
+                if card > highest_card:
+                    highest_card = card
+                    winning_player = [player]
+                elif card == highest_card:
+                    winning_player.append(player)
+        return winning_player
+
+    def hand_winner(self, hand_winner):
+        if len(hand_winner) == 1:
+            hand_winner[0].chips += self.currentPot
+            self.send_msg_to_all_players(f'Winner is {str(hand_winner[0])}')
+        elif len(hand_winner) > 1:
+            for player in hand_winner:
+                player.chips += int(self.currentPot / len(hand_winner))
+            self.send_msg_to_all_players(f'Split pot {[str(player) for player in hand_winner]}')
+
+        self.currentPot = 0
 
 
-
-
-
-
-class Hand():
-
+#Dealer Class
+class Hand:
     def __init__(self, game):
         self.table = []
         self.game = game
         self.deck = Deck()
 
-
     def betting(self):
         pass
 
-    def dealPlayers(self):
+    def deal_players(self):
         # First card
         for player in self.game.players:
-            player.addCardtoHand(self.deck.pop())
+            player.add_card_to_hand(self.deck.pop())
+        time.sleep(1)
         #Second card
         for player in self.game.players:
-            player.addCardtoHand(self.deck.pop())
+            player.add_card_to_hand(self.deck.pop())
+        time.sleep(1)
 
-    def dealRiver(self):
+    def deal_river(self):
         self.table.append(self.deck.pop())
         self.table.append(self.deck.pop())
-        self.table.append(self.deck.pop())
-
-    def dealTurn(self):
         self.table.append(self.deck.pop())
 
-    def dealFlop(self):
+    def deal_turn(self):
+        self.table.append(self.deck.pop())
+
+    def deal_flop(self):
         self.table.append(self.deck.pop())
 
     def reset(self):
-        for player in self.game.players:
-            player.resetHand()
-
-    def getWinner(self):
-        pass
+        [player.reset_hand() for player in self.game.players]
 
 
-
-if __name__== "__main__":
+if __name__ == "__main__":
     main()
 

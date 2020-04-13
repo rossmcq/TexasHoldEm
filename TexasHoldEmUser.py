@@ -15,8 +15,12 @@ def main():
         #client_socket.setblocking(False)
 
         #Create player
-        newPlayer = input('What is your name?')
-        username = newPlayer.encode('utf-8')
+        newPlayer = input('What is your name?').strip()
+        if len(newPlayer) < 100:
+            username = newPlayer.encode('utf-8')
+        else:
+            raise Exception('Username needs to be  < 100 characters')
+
         username_header = f"{len(username):<{HEADERLENGTH}}".encode('utf-8')
         client_socket.send(username_header + username)
 
@@ -25,12 +29,25 @@ def main():
 
             while True:
                 # receive things
-                returnmessage = client_socket.recv(36)
-                if not len(returnmessage):
+                return_message = client_socket.recv(1024)
+                if not len(return_message):
                     print("connection closed by server")
                     sys.exit()
 
-                print(returnmessage.decode('utf-8'))
+                print(return_message.decode('utf-8'))
+
+                if return_message.decode('utf-8') == 'Do you want to [R]aise, [C]all or [F]lop?':
+                    while True:
+                        raiseflopcall = input()
+                        if raiseflopcall.lower() in ['r','c','f']:
+                            raiseflopcallbytes = raiseflopcall.lower().encode('utf-8')
+                            client_socket.send(username_header + raiseflopcallbytes)
+                            break
+                        else:
+                            print('Please enter either F, R or C')
+
+
+
                 '''
                 username_length = int(username_header.decode("utf-8"))
                 username = client_socket.recv(username_length).decode('utf-8')
@@ -44,14 +61,12 @@ def main():
                 #print('Your Player Profile is: ', full_data)
 
 
+
         except IOError as e:
 
             if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
                 print('reading error ', str(e))
-
                 sys.exit()
-
-
 
         except Exception as e:
 
