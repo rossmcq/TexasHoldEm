@@ -1,7 +1,7 @@
 # TexasHoldEm
 TexasHoldEm card game simulator
 Needs some work and tidying up, 
-I'm sure there's alot of best practises that I'm not coding to as I'm not familiar with them! 
+I'm sure there's a lot of best practises that I'm not coding to as I'm not familiar with them,
 I'm open to any improvement suggestions :)
 
 1) To start run TexasHoldem.py to start the game engine
@@ -15,9 +15,7 @@ I'm open to any improvement suggestions :)
     
     ii) Calculate Winning Hand (currently just highest card wins)
     
-    iii)  Change player on the button after each hand,
-    
-    iv) merge games if not many players
+    iii) merge games if not many players
 
 3) Logging
 

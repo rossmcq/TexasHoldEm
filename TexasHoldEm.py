@@ -173,6 +173,7 @@ class Main:
     def remove_game(self, game):
         self.games.remove(game)
 
+    # TODO: Merge games if there's > 2 games with not many numbers
     def merge_games(self):
         pass
 
@@ -245,6 +246,7 @@ class Player:
     def get_game(self):
         return self.game
 
+    # TODO: Header String in messages
     def send_msg_to_player(self, msg):
         try:
             self.player_socket.send(msg.encode('utf-8'))
@@ -258,6 +260,7 @@ class Player:
 
     def reset_hand(self):
         self.hand = []
+        self.currentStake = 0
 
     def take_bet(self):
         self.send_msg_to_player('Do you want to [R]aise, [C]all or [F]lop?')
@@ -284,10 +287,12 @@ class Player:
 
     def fold(self):
         self.game.player_fold(self)
+        self.currentStake = 0
 
     def call(self):
         self.game.player_call(self)
 
+    # TODO: Raise hand logic
     def raise_hand(self, chips):
         self.chips -= chips
         self.game.player_raise(self, chips)
@@ -316,6 +321,7 @@ class Game:
 
     def remove_player(self, player):
         self.players.remove(player)
+        self.send_msg_to_all_players(f'{player} left the table!')
 
     def get_players(self):
         return self.players
@@ -334,17 +340,21 @@ class Game:
         self.send_msg_to_all_players(f'{player} folded')
 
     def player_call(self, player):
+        self.add_chips_to_pot(player, self.minimumStake - player.currentStake)
         self.send_msg_to_all_players(f'{player} called')
 
     def player_raise(self, player, amount):
         self.send_msg_to_all_players(f'{player} raised {amount}')
 
     def take_blinds(self):
-        self.players[(self.buttonPlayerIndex + 1) % len(self.players)].chips -= int(self.blind_amount * 0.5)
+        self.add_chips_to_pot(self.players[(self.buttonPlayerIndex + 1) % len(self.players)], int(self.blind_amount * 0.5))
 
-        self.players[(self.buttonPlayerIndex + 2) % len(self.players)].chips -= self.blind_amount
+        self.add_chips_to_pot(self.players[(self.buttonPlayerIndex + 2) % len(self.players)], self.blind_amount)
 
-        self.currentPot += int(self.blind_amount * 1.5)
+    def add_chips_to_pot(self, player, amount):
+        player.chips -= amount
+        player.currentStake += amount
+        self.currentPot += amount
 
     def play_game(self):
         while True:
@@ -356,7 +366,6 @@ class Game:
                 self.send_msg_to_all_players(f'Waiting for players to join game...')
                 time.sleep(3)
                 self.handNumber += 1
-                print(f'Hand number {self.handNumber}')
                 self.send_msg_to_all_players(f'Hand number {self.handNumber}')
                 self.gameInPlay = 1
 
@@ -367,17 +376,16 @@ class Game:
                 self.activePlayers.rotate(-(1 + self.buttonPlayerIndex))
                 hand = Hand(self)
 
-                #Tell players whose in this round
+                # Tell players whose in this round
                 game_players = ''
                 for player in self.get_players():
-                    if player == self.get_players()[self.buttonPlayerIndex]:
-                        game_players += str(player) + ' BUTTON\n'
-                    elif player == self.get_players()[(self.buttonPlayerIndex + 1) % len(self.get_players())]:
+                    if player == self.get_players()[(self.buttonPlayerIndex + 1) % len(self.get_players())]:
                         game_players += str(player) + ' SMALL BLIND\n'
                     elif player == self.get_players()[(self.buttonPlayerIndex + 2) % len(self.get_players())]:
                         game_players += str(player) + ' BIG BLIND\n'
+                    elif player == self.get_players()[self.buttonPlayerIndex]:
+                        game_players += str(player) + ' BUTTON\n'
 
-                print(f'Players in this game: \n{game_players}')
                 self.send_msg_to_all_players(game_players)
 
                 hand.deal_players()
@@ -407,7 +415,8 @@ class Game:
                 hand.reset()
 
                 # move button player on
-                self.buttonPlayerIndex = (self.buttonPlayerIndex + 1) % len(self.get_players())
+                if len(self.get_players()) > 0:
+                    self.buttonPlayerIndex = (self.buttonPlayerIndex + 1) % len(self.get_players())
 
                 # print('player.hand - after reset', player.hand)
                 print('**END OF HAND**')
@@ -422,7 +431,7 @@ class Game:
                 self.gameInPlay = 0
                 break
 
-
+    # TODO: Calculate hand winner correctly
     def calc_hand_winner(self):
         # For now set player with the highest card to be winner
         highest_card = Card('-1', '-1')
@@ -446,6 +455,7 @@ class Game:
             self.send_msg_to_all_players(f'Split pot {[str(player) for player in hand_winner]}')
 
         self.currentPot = 0
+        self.minimumStake = self.blind_amount
 
 
 #Dealer Class
@@ -454,9 +464,6 @@ class Hand:
         self.table = []
         self.game = game
         self.deck = Deck()
-
-    def betting(self):
-        pass
 
     def deal_players(self):
         # First card
@@ -469,14 +476,17 @@ class Hand:
         time.sleep(1)
 
     def deal_river(self):
+        self.deck.pop()
         self.table.append(self.deck.pop())
         self.table.append(self.deck.pop())
         self.table.append(self.deck.pop())
 
     def deal_turn(self):
+        self.deck.pop()
         self.table.append(self.deck.pop())
 
     def deal_flop(self):
+        self.deck.pop()
         self.table.append(self.deck.pop())
 
     def reset(self):
