@@ -1,5 +1,6 @@
 # TexasHoldEm
-I am currently refactoring this to an Microservices Architechture - latest commits are on my gitlab https://gitlab.com/mcanal/texasholdem
+:warning: **I am currently refactoring this to an Microservices Architechture** 
+latest commits are on my gitlab https://gitlab.com/mcanal/texasholdem :warning: 
 
 TexasHoldEm card game simulator
 Needs some work and tidying up, 
