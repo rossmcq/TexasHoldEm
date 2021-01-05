@@ -1,4 +1,6 @@
 # TexasHoldEm
+I am currently refactoring this to an Microservices Architechture - latest commits are on my gitlab https://gitlab.com/mcanal/texasholdem
+
 TexasHoldEm card game simulator
 Needs some work and tidying up, 
 I'm sure there's a lot of best practises that I'm not coding to as I'm not familiar with them,
