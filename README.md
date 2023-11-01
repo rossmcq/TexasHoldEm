@@ -10,7 +10,7 @@ Currently doing a bit of a tidy up after it not beeing looked at since 2019
 ## Limitations
 1) Only can be run on 1 machine with all players sharing that machine. 
 
-##TODO: 
+## TODO: 
 1) Testing unit and E2E
 2) Game Logic:
 
