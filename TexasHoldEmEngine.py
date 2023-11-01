@@ -6,11 +6,19 @@ import select
 from collections import deque
 from typing import Optional
 from _thread import start_new_thread
-from multiprocessing import Process
+import logging
+import os
 
 HEADERLENGTH = 10
 IP = "127.0.0.1"
 PORT = 12121
+
+log = logging.getLogger(__name__)
+logging.basicConfig(
+    level=os.environ.get("LOGLEVEL", "DEBUG"),
+    format="%(asctime)s.%(msecs)03d - %(levelname)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 numbers = ("2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A")
 suits = ("♥", "♠", "♦", "♣")
@@ -236,7 +244,7 @@ class Deck:
 class Player:
     def __init__(self, name, player_socket):
         self.playerid = uuid.uuid1()
-        self.player_socket = player_socket
+        self.player_socket: socket.socket = player_socket
         self.name = name
         self.chips = 1000
         self.hand = []
@@ -255,9 +263,10 @@ class Player:
         return self.game
 
     # TODO: Header String in messages
-    def send_msg_to_player(self, msg):
+    def send_msg_to_player(self, msg: str):
         try:
             self.player_socket.send(msg.encode("utf-8"))
+            time.sleep(0.2)
         except ConnectionResetError as e:
             print("Player disconnected still pending remove")
             print(e)
@@ -271,7 +280,7 @@ class Player:
         self.currentStake = 0
 
     def take_bet(self):
-        self.send_msg_to_player("Do you want to [C]all or [F]lop?")
+        self.send_msg_to_player("Do you want to [C]all or [F]old?")
         self.action = "u"
         self.timeout = 20
 
@@ -350,6 +359,7 @@ class Game:
     def player_fold(self, player):
         self.activePlayers.remove(player)
         self.send_msg_to_all_players(f"{player} folded")
+        self.is_hand_won()
 
     def player_call(self, player):
         self.add_chips_to_pot(player, self.minimumStake - player.currentStake)
@@ -422,19 +432,21 @@ class Game:
 
                 self.take_bets()
 
-                while self.gameInPlay:
+                if self.gameInPlay:
                     hand.deal_river()
                     self.send_msg_to_all_players(
                         f"River - {[(card.number, card.suit) for card in hand.table]}"
                     )
                     self.take_bets()
 
+                if self.gameInPlay:
                     hand.deal_turn()
                     self.send_msg_to_all_players(
                         f"Turn - {[(card.number, card.suit) for card in hand.table]}"
                     )
                     self.take_bets()
 
+                if self.gameInPlay:
                     hand.deal_flop()
                     self.send_msg_to_all_players(
                         f"Flop - {[(card.number, card.suit) for card in hand.table]}"
@@ -457,15 +469,17 @@ class Game:
                 # print('player.hand - after reset', player.hand)
                 print("**END OF HAND**")
 
+    def is_hand_won(self):
+        if len(self.activePlayers) == 1:
+            self.hand_winner([self.activePlayers[0]])
+            self.gameInPlay = False
+
     def take_bets(self):
-        time.sleep(0.5)
+        # time.sleep(0.2)
         self.send_msg_to_all_players("POT: " + str(self.currentPot))
         for player in self.activePlayers.copy():
-            player.take_bet()
-            if len(self.activePlayers) == 1:
-                self.hand_winner([self.activePlayers[0]])
-                self.gameInPlay = False
-                break
+            if self.gameInPlay:
+                player.take_bet()
 
     # TODO: Calculate hand winner correctly
     def calc_hand_winner(self):
@@ -507,11 +521,11 @@ class Hand:
         # First card
         for player in self.game.players:
             player.add_card_to_hand(self.deck.pop())
-        time.sleep(1)
+        # time.sleep(0.2)
         # Second card
         for player in self.game.players:
             player.add_card_to_hand(self.deck.pop())
-        time.sleep(1)
+        # time.sleep(0.2)
 
     def deal_river(self):
         self.deck.pop()
