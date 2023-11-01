@@ -1,16 +1,15 @@
 # TexasHoldEm
-:warning: **I am currently refactoring this to a Microservices Architechture** 
-latest commits are on my gitlab https://gitlab.com/mcanal/texasholdem :warning: 
-
 TexasHoldEm card game simulator
 Needs some work and tidying up, 
-I'm sure there's a lot of best practises that I'm not coding to as I'm not familiar with them,
-I'm open to any improvement suggestions :)
 
+# Run the game
 1) To start run TexasHoldem.py to start the game engine
 2) Users connect to the game engine by running TexasHoldEmUser.py
 
-#TODO: 
+## Limitations
+1) Only can be run on 1 machine with all players sharing that machine. 
+
+##TODO: 
 1) HeaderString in messages
 2) Game Logic:
 
@@ -21,9 +20,7 @@ I'm open to any improvement suggestions :)
     iii) merge games if not many players
 
 3) Logging
-
-4) Alerting
-5) User log in/retain chips 
-
-
-UI?
+4) Testing
+5) Alerting
+6) User log in/retain chips
+7) UI (I made a start refactoring to a microservice architechture with UI latest commits are on my gitlab https://gitlab.com/mcanal/texasholdem)
