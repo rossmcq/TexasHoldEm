@@ -9,7 +9,7 @@ PORT = 12121
 
 
 def main():
-    if input("Do you want to join a game of Texas Hold Em? [Y/N]") == "Y":
+    if input("Do you want to join a game of Texas Hold Em? [Y/n]") in ("Y", "y", ""):
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((IP, PORT))
         # client_socket.setblocking(False)
