@@ -2,7 +2,7 @@
 TexasHoldEm card game simulator that runs in Terminal
 Currently doing a bit of a tidy up after it not beeing looked at since 2019
 
-# Run the game
+## Run the game
 1) To start run `TexasHoldemEngine.py` to start the game engine
 2) Each player can connect to the game engine by running `TexasHoldEmUser.py` in a terminal.
 3) More than one player needed to start the game. So you may need to repeat step 2 in a separate terminal.
