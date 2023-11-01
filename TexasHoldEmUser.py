@@ -16,7 +16,8 @@ logging.basicConfig(
     format="%(asctime)s.%(msecs)03d - %(levelname)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-default_names: list[str] = ["Dave", "Scott", "Juan", "Sara", "Tracey", "Tim", "Ross"]
+default_names: list[str] = ["Dave", "Scott", "Juan",
+                            "Sara", "Tracey", "Tim", "Ross", "Tina", "Rodders"]
 
 
 def main():
@@ -33,6 +34,7 @@ def main():
 
         if len(newPlayer) < 100:
             username = newPlayer.encode("utf-8")
+            print(f"Welcome {username}!!")
         else:
             raise Exception("Username needs to be  < 100 characters")
 
@@ -52,12 +54,15 @@ def main():
                 print(decode_return_message)
 
                 if decode_return_message == "Do you want to [C]all or [F]old?":
-                    raiseflopcall = input(": ")
-                    if raiseflopcall.lower() in ["c", "f"]:
-                        raiseflopcallbytes = raiseflopcall.lower().encode("utf-8")
-                        client_socket.send(username_header + raiseflopcallbytes)
-                    else:
-                        print("Please enter either F or C")
+                    while True:
+                        raiseflopcall = input(": ")
+                        if raiseflopcall.lower() in ["c", "f", ""]:
+                            raiseflopcallbytes = raiseflopcall.lower().encode("utf-8")
+                            client_socket.send(
+                                username_header + raiseflopcallbytes)
+                            break
+                        else:
+                            print("Please enter either F or C")
         except IOError as e:
             if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
                 print("reading error ", str(e))

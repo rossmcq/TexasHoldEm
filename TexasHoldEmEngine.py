@@ -293,7 +293,7 @@ class Player:
             self.fold()
         elif self.action.lower() == "f":
             self.fold()
-        elif self.action.lower() == "c":
+        elif self.action.lower() in ("c", ""):
             self.call()
         # elif self.action.lower() == 'r':
         #     self.raise_hand()
@@ -333,7 +333,8 @@ class Game:
     def add_player(self, player):
         self.players.append(player)
         player.game = self
-        player.player_socket.send(str("GAMEID: " + str(self.gameId)).encode("utf-8"))
+        player.player_socket.send(
+            str("GAMEID: " + str(self.gameId)).encode("utf-8"))
 
         if self.gameInPlay == 1:
             player.player_socket.send(
@@ -393,7 +394,8 @@ class Game:
                 time.sleep(4)
 
             while len(self.players) >= 2:
-                self.send_msg_to_all_players(f"Waiting for players to join game...")
+                self.send_msg_to_all_players(
+                    f"Waiting for players to join game...")
                 time.sleep(3)
                 self.handNumber += 1
                 self.send_msg_to_all_players(f"Hand number {self.handNumber}")
