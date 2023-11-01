@@ -4,7 +4,8 @@ import time
 import socket
 import select
 from collections import deque
-from _thread import *
+from typing import Optional
+from _thread import start_new_thread
 from multiprocessing import Process
 
 HEADERLENGTH = 10
@@ -187,9 +188,6 @@ class Main:
 
 
 class Card:
-    def __init__(self):
-        self.rank = -1
-
     def __init__(self, number, suit):
         if number in numbers and suit in suits:
             self.number = number
@@ -228,6 +226,9 @@ class Deck:
     def __str__(self):
         return str(self.deck)
 
+    def __len__(self):
+        return len(self.deck)
+
     def pop(self):
         return self.deck.pop()
 
@@ -239,7 +240,7 @@ class Player:
         self.name = name
         self.chips = 1000
         self.hand = []
-        self.game = 0
+        self.game: Optional[Game] = None
         self.timeout = 0
         self.action = "u"
         self.currentStake = 0
@@ -293,25 +294,27 @@ class Player:
             raise Exception("Unhandled player action!")
 
     def fold(self):
-        self.game.player_fold(self)
+        if self.game:
+            self.game.player_fold(self)
         self.currentStake = 0
 
     def call(self):
-        self.game.player_call(self)
+        if self.game:
+            self.game.player_call(self)
 
-    # TODO: Raise hand logic
-    def raise_hand(self, chips):
-        self.chips -= chips
-        self.game.player_raise(self, chips)
+    # # TODO: Raise hand logic
+    # def raise_hand(self, chips):
+    #     self.chips -= chips
+    #     self.game.player_raise(self, chips)
 
 
 class Game:
     def __init__(self):
-        self.players = []
+        self.players: list[Player] = []
         self.gameId = uuid.uuid1()
-        self.gameInPlay = 0
+        self.gameInPlay: bool = False
         self.buttonPlayerIndex = 0
-        self.activePlayers = []
+        self.activePlayers: list[Player] = []
         self.currentPot = 0
         self.started = 0
         self.handNumber = 0
@@ -342,7 +345,7 @@ class Game:
         return self.gameId
 
     def send_msg_to_all_players(self, msg):
-        [player.send_msg_to_player(msg) for player in self.players]
+        [player.send_msg_to_player(msg + "\n") for player in self.players]
 
     def player_fold(self, player):
         self.activePlayers.remove(player)
@@ -352,8 +355,8 @@ class Game:
         self.add_chips_to_pot(player, self.minimumStake - player.currentStake)
         self.send_msg_to_all_players(f"{player} called")
 
-    def player_raise(self, player, amount):
-        self.send_msg_to_all_players(f"{player} raised {amount}")
+    # def player_raise(self, player, amount):
+    #     self.send_msg_to_all_players(f"{player} raised {amount}")
 
     def take_blinds(self):
         self.add_chips_to_pot(
@@ -384,7 +387,7 @@ class Game:
                 time.sleep(3)
                 self.handNumber += 1
                 self.send_msg_to_all_players(f"Hand number {self.handNumber}")
-                self.gameInPlay = 1
+                self.gameInPlay = True
 
                 self.take_blinds()
 
@@ -419,30 +422,28 @@ class Game:
 
                 self.take_bets()
 
-                if self.gameInPlay:
+                while self.gameInPlay:
                     hand.deal_river()
                     self.send_msg_to_all_players(
                         f"River - {[(card.number, card.suit) for card in hand.table]}"
                     )
                     self.take_bets()
 
-                    if self.gameInPlay:
-                        hand.deal_turn()
-                        self.send_msg_to_all_players(
-                            f"Turn - {[(card.number, card.suit) for card in hand.table]}"
-                        )
-                        self.take_bets()
+                    hand.deal_turn()
+                    self.send_msg_to_all_players(
+                        f"Turn - {[(card.number, card.suit) for card in hand.table]}"
+                    )
+                    self.take_bets()
 
-                        if self.gameInPlay:
-                            hand.deal_flop()
-                            self.send_msg_to_all_players(
-                                f"Flop - {[(card.number, card.suit) for card in hand.table]}"
-                            )
-                            self.take_bets()
+                    hand.deal_flop()
+                    self.send_msg_to_all_players(
+                        f"Flop - {[(card.number, card.suit) for card in hand.table]}"
+                    )
+                    self.take_bets()
 
-                            if self.gameInPlay:
-                                hand_winner = self.calc_hand_winner()
-                                self.hand_winner(hand_winner)
+                    hand_winner = self.calc_hand_winner()
+                    self.hand_winner(hand_winner)
+                    self.gameInPlay = False
 
                 # reset players hands
                 hand.reset()
@@ -463,7 +464,7 @@ class Game:
             player.take_bet()
             if len(self.activePlayers) == 1:
                 self.hand_winner([self.activePlayers[0]])
-                self.gameInPlay = 0
+                self.gameInPlay = False
                 break
 
     # TODO: Calculate hand winner correctly
@@ -499,7 +500,7 @@ class Game:
 class Hand:
     def __init__(self, game):
         self.table = []
-        self.game = game
+        self.game: Game = game
         self.deck = Deck()
 
     def deal_players(self):

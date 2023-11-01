@@ -24,3 +24,4 @@ Needs some work and tidying up,
 5) Alerting
 6) User log in/retain chips
 7) UI (I made a start refactoring to a microservice architechture with UI latest commits are on my gitlab https://gitlab.com/mcanal/texasholdem)
+8) Typehints
