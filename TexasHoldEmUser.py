@@ -2,10 +2,21 @@ import socket
 import select
 import errno
 import sys
+import logging
+import os
+from random import shuffle
 
 HEADERLENGTH = 10
 IP = "127.0.0.1"
 PORT = 12121
+
+log = logging.getLogger(__name__)
+logging.basicConfig(
+    level=os.environ.get("LOGLEVEL", "DEBUG"),
+    format="%(asctime)s.%(msecs)03d - %(levelname)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+default_names: list[str] = ["Dave", "Scott", "Juan", "Sara", "Tracey", "Tim", "Ross"]
 
 
 def main():
@@ -15,7 +26,11 @@ def main():
         # client_socket.setblocking(False)
 
         # Create player
-        newPlayer = input("What is your name?").strip()
+        newPlayer = input("What is your name? ").strip()
+        if newPlayer == "":
+            shuffle(default_names)
+            newPlayer = default_names.pop()
+
         if len(newPlayer) < 100:
             username = newPlayer.encode("utf-8")
         else:
@@ -32,30 +47,17 @@ def main():
                     print("connection closed by server")
                     sys.exit()
 
-                print(return_message.decode("utf-8"))
+                decode_return_message = return_message.decode("utf-8").strip()
 
-                if return_message.decode("utf-8") == "Do you want to [C]all or [F]lop?":
-                    while True:
-                        raiseflopcall = input()
-                        if raiseflopcall.lower() in ["c", "f"]:
-                            raiseflopcallbytes = raiseflopcall.lower().encode("utf-8")
-                            client_socket.send(username_header + raiseflopcallbytes)
-                            break
-                        else:
-                            print("Please enter either F, R or C")
+                print(decode_return_message)
 
-                """
-                username_length = int(username_header.decode("utf-8"))
-                username = client_socket.recv(username_length).decode('utf-8')
-
-                message_header = client_socket.recv((HEADERLENGTH))
-                message_length = int(message_header.decode('utf-8').strip())
-                message = client_socket.recv(message_length).decode('utf-8')
-
-                print(f"{username} > {message}")
-                """
-                # print('Your Player Profile is: ', full_data)
-
+                if decode_return_message == "Do you want to [C]all or [F]old?":
+                    raiseflopcall = input(": ")
+                    if raiseflopcall.lower() in ["c", "f"]:
+                        raiseflopcallbytes = raiseflopcall.lower().encode("utf-8")
+                        client_socket.send(username_header + raiseflopcallbytes)
+                    else:
+                        print("Please enter either F or C")
         except IOError as e:
             if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
                 print("reading error ", str(e))
@@ -65,9 +67,6 @@ def main():
             print("General error", str(e))
 
             sys.exit()
-
-    #        while(len(pokerEngine.games) > 0):
-    #            newPlayer.joinGame()
     else:
         print("OK Bye!")
 
