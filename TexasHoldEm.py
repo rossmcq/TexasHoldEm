@@ -11,19 +11,20 @@ HEADERLENGTH = 10
 IP = "127.0.0.1"
 PORT = 12121
 
-numbers = ('2','3','4','5','6','7','8','9','10','J','Q','K','A')
-suits = ('♥', '♠', '♦', '♣')
+numbers = ("2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A")
+suits = ("♥", "♠", "♦", "♣")
+
 
 def main():
-    #start poker engine
+    # start poker engine
     pokerEngine = Main()
 
     # Create a TCP/IP socket
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-    #Bind to port on IP, leave IP blank to allow
-    #connections from other local computers
+    # Bind to port on IP, leave IP blank to allow
+    # connections from other local computers
     server_socket.bind((IP, PORT))
     server_socket.listen(20)
 
@@ -31,14 +32,16 @@ def main():
 
     clients = {}
 
-    print('starting up on %s port %s' % (IP, PORT))
+    print("starting up on %s port %s" % (IP, PORT))
 
     # Listen for incoming connections
 
     while True:
         # Wait for a connection
-        print('waiting for a connection')
-        read_sockets, _, exception_sockets = select.select(sockets_list, [], sockets_list)
+        print("waiting for a connection")
+        read_sockets, _, exception_sockets = select.select(
+            sockets_list, [], sockets_list
+        )
 
         for notified_socket in read_sockets:
             if notified_socket == server_socket:
@@ -53,36 +56,40 @@ def main():
 
                 clients[client_socket] = user
 
-                player = Player(user['data'].decode('utf-8'), client_socket)
+                player = Player(user["data"].decode("utf-8"), client_socket)
                 gameID = pokerEngine.add_player_to_random_game(player)
-                print(f"Accepted new connection from {client_address[0]}:{client_address[1]} username:{user['data'].decode('utf-8')} Adding them to game on thread {gameID}")
-
-
+                print(
+                    f"Accepted new connection from {client_address[0]}:{client_address[1]} username:{user['data'].decode('utf-8')} Adding them to game on thread {gameID}"
+                )
 
             else:
                 message = recieve_message(notified_socket)
 
                 if message is False:
-                    print(f"Closed connection from  {clients[notified_socket]['data'].decode('utf-8')}")
+                    print(
+                        f"Closed connection from  {clients[notified_socket]['data'].decode('utf-8')}"
+                    )
                     sockets_list.remove(notified_socket)
                     pokerEngine.remove_player(notified_socket)
                     del clients[notified_socket]
                     continue
 
                 user = clients[notified_socket]
-                print(f"Received message from {user['data'].decode('utf-8')}: {message['data'].decode('utf-8')}")
+                print(
+                    f"Received message from {user['data'].decode('utf-8')}: {message['data'].decode('utf-8')}"
+                )
 
                 for game in pokerEngine.games:
                     for player in game.players:
                         if player.player_socket == notified_socket:
-                            player.action = message['data'].decode('utf-8')
+                            player.action = message["data"].decode("utf-8")
 
-                '''
+                """
                 #sends to all but sender
                 for client_socket in clients:
                     if client_socket != notified_socket:
                         client_socket.send(user['header'] + user['data'] + message['header'] + message['data'])
-                '''
+                """
 
             for notified_socket in exception_sockets:
                 sockets_list.remove(notified_socket)
@@ -103,7 +110,8 @@ def recieve_message(client_socket):
         print("General Error: ", e)
         return False
 
-'''     
+
+"""     
         try:
             print('connection from', client_address)
 
@@ -128,7 +136,7 @@ def recieve_message(client_socket):
         finally:
             # Clean up the connection
             connection.close()
-'''
+"""
 
 
 class Main:
@@ -139,24 +147,24 @@ class Main:
         self.games = []
         self.active = 1
 
-    #Returns Gameid which player was added to
+    # Returns Gameid which player was added to
     def add_player_to_random_game(self, player):
-        #If no games currently in play then create one
+        # If no games currently in play then create one
         if len(self.games) == 0:
-            return start_new_thread(self.create_game_and_add_player, (player, ))
+            return start_new_thread(self.create_game_and_add_player, (player,))
         # Else check if games are full
         else:
             gamesFull = 1
             for game in self.games:
                 if len(game.get_players()) < self.MAXGAMEPLAYERS:
                     game.add_player(player)
-                    print('You are playing in game %d', game.get_game_id())
+                    print("You are playing in game %d", game.get_game_id())
                     gamesFull = 0
                     return game.get_game_id()
 
             # If games full then create new game and add player
             if gamesFull == 1:
-                return start_new_thread(self.create_game_and_add_player, (player, ))
+                return start_new_thread(self.create_game_and_add_player, (player,))
 
     def create_game_and_add_player(self, player):
         game = Game()
@@ -188,11 +196,11 @@ class Card:
             self.suit = suit
             self.rank = numbers.index(number)
             self.card = (number, suit)
-        elif number == '-1' and suit == '-1':
-            #Dummy card
+        elif number == "-1" and suit == "-1":
+            # Dummy card
             self.rank = -1
         else:
-            raise Exception('Card not a standard playing card!')
+            raise Exception("Card not a standard playing card!")
 
     def __str__(self):
         return str(self.card)
@@ -208,7 +216,6 @@ class Card:
 
 
 class Deck:
-
     def __init__(self):
         self.deck = []
 
@@ -234,11 +241,11 @@ class Player:
         self.hand = []
         self.game = 0
         self.timeout = 0
-        self.action = 'u'
+        self.action = "u"
         self.currentStake = 0
 
     def __str__(self):
-        return f'{self.name} {str(self.chips)}'
+        return f"{self.name} {str(self.chips)}"
 
     def get_player_name(self):
         return self.name
@@ -249,9 +256,9 @@ class Player:
     # TODO: Header String in messages
     def send_msg_to_player(self, msg):
         try:
-            self.player_socket.send(msg.encode('utf-8'))
+            self.player_socket.send(msg.encode("utf-8"))
         except ConnectionResetError as e:
-            print('Player disconnected still pending remove')
+            print("Player disconnected still pending remove")
             print(e)
 
     def add_card_to_hand(self, card):
@@ -263,27 +270,27 @@ class Player:
         self.currentStake = 0
 
     def take_bet(self):
-        self.send_msg_to_player('Do you want to [R]aise, [C]all or [F]lop?')
-        self.action = 'u'
+        self.send_msg_to_player("Do you want to [C]all or [F]lop?")
+        self.action = "u"
         self.timeout = 20
 
-        while self.timeout > 0 and self.action == 'u':
+        while self.timeout > 0 and self.action == "u":
             time.sleep(1)
             self.timeout -= 1
 
         if self.timeout == 0:
-            print(f'{self.name} timed out!')
+            print(f"{self.name} timed out!")
             self.fold()
-        elif self.action.lower() == 'f':
+        elif self.action.lower() == "f":
             self.fold()
-        elif self.action.lower() == 'c':
+        elif self.action.lower() == "c":
             self.call()
-        elif self.action.lower() == 'r':
-            self.raise_hand()
-        elif self.action is int:
-            self.raise_hand(self.action)
+        # elif self.action.lower() == 'r':
+        #     self.raise_hand()
+        # elif self.action is int:
+        #     self.raise_hand(self.action)
         else:
-            raise Exception('Unhandled player action!')
+            raise Exception("Unhandled player action!")
 
     def fold(self):
         self.game.player_fold(self)
@@ -314,14 +321,16 @@ class Game:
     def add_player(self, player):
         self.players.append(player)
         player.game = self
-        player.player_socket.send(str("GAMEID: " + str(self.gameId)).encode('utf-8'))
+        player.player_socket.send(str("GAMEID: " + str(self.gameId)).encode("utf-8"))
 
         if self.gameInPlay == 1:
-            player.player_socket.send(str("Game In Play please wait until next round starts!").encode('utf-8'))
+            player.player_socket.send(
+                str("Game In Play please wait until next round starts!").encode("utf-8")
+            )
 
     def remove_player(self, player):
         self.players.remove(player)
-        self.send_msg_to_all_players(f'{player} left the table!')
+        self.send_msg_to_all_players(f"{player} left the table!")
 
     def get_players(self):
         return self.players
@@ -337,19 +346,25 @@ class Game:
 
     def player_fold(self, player):
         self.activePlayers.remove(player)
-        self.send_msg_to_all_players(f'{player} folded')
+        self.send_msg_to_all_players(f"{player} folded")
 
     def player_call(self, player):
         self.add_chips_to_pot(player, self.minimumStake - player.currentStake)
-        self.send_msg_to_all_players(f'{player} called')
+        self.send_msg_to_all_players(f"{player} called")
 
     def player_raise(self, player, amount):
-        self.send_msg_to_all_players(f'{player} raised {amount}')
+        self.send_msg_to_all_players(f"{player} raised {amount}")
 
     def take_blinds(self):
-        self.add_chips_to_pot(self.players[(self.buttonPlayerIndex + 1) % len(self.players)], int(self.blind_amount * 0.5))
+        self.add_chips_to_pot(
+            self.players[(self.buttonPlayerIndex + 1) % len(self.players)],
+            int(self.blind_amount * 0.5),
+        )
 
-        self.add_chips_to_pot(self.players[(self.buttonPlayerIndex + 2) % len(self.players)], self.blind_amount)
+        self.add_chips_to_pot(
+            self.players[(self.buttonPlayerIndex + 2) % len(self.players)],
+            self.blind_amount,
+        )
 
     def add_chips_to_pot(self, player, amount):
         player.chips -= amount
@@ -359,14 +374,16 @@ class Game:
     def play_game(self):
         while True:
             while len(self.players) < 2:
-                self.send_msg_to_all_players(f'You are the only player in the game, waiting for others to join...')
+                self.send_msg_to_all_players(
+                    f"You are the only player in the game, waiting for others to join..."
+                )
                 time.sleep(4)
 
             while len(self.players) >= 2:
-                self.send_msg_to_all_players(f'Waiting for players to join game...')
+                self.send_msg_to_all_players(f"Waiting for players to join game...")
                 time.sleep(3)
                 self.handNumber += 1
-                self.send_msg_to_all_players(f'Hand number {self.handNumber}')
+                self.send_msg_to_all_players(f"Hand number {self.handNumber}")
                 self.gameInPlay = 1
 
                 self.take_blinds()
@@ -377,14 +394,24 @@ class Game:
                 hand = Hand(self)
 
                 # Tell players whose in this round
-                game_players = ''
+                game_players = ""
                 for player in self.get_players():
-                    if player == self.get_players()[(self.buttonPlayerIndex + 1) % len(self.get_players())]:
-                        game_players += str(player) + ' SMALL BLIND\n'
-                    elif player == self.get_players()[(self.buttonPlayerIndex + 2) % len(self.get_players())]:
-                        game_players += str(player) + ' BIG BLIND\n'
+                    if (
+                        player
+                        == self.get_players()[
+                            (self.buttonPlayerIndex + 1) % len(self.get_players())
+                        ]
+                    ):
+                        game_players += str(player) + " SMALL BLIND\n"
+                    elif (
+                        player
+                        == self.get_players()[
+                            (self.buttonPlayerIndex + 2) % len(self.get_players())
+                        ]
+                    ):
+                        game_players += str(player) + " BIG BLIND\n"
                     elif player == self.get_players()[self.buttonPlayerIndex]:
-                        game_players += str(player) + ' BUTTON\n'
+                        game_players += str(player) + " BUTTON\n"
 
                 self.send_msg_to_all_players(game_players)
 
@@ -394,17 +421,23 @@ class Game:
 
                 if self.gameInPlay:
                     hand.deal_river()
-                    self.send_msg_to_all_players(f'River - {[(card.number, card.suit) for card in hand.table]}')
+                    self.send_msg_to_all_players(
+                        f"River - {[(card.number, card.suit) for card in hand.table]}"
+                    )
                     self.take_bets()
 
                     if self.gameInPlay:
                         hand.deal_turn()
-                        self.send_msg_to_all_players(f'Turn - {[(card.number, card.suit) for card in hand.table]}')
+                        self.send_msg_to_all_players(
+                            f"Turn - {[(card.number, card.suit) for card in hand.table]}"
+                        )
                         self.take_bets()
 
                         if self.gameInPlay:
                             hand.deal_flop()
-                            self.send_msg_to_all_players(f'Flop - {[(card.number, card.suit) for card in hand.table]}')
+                            self.send_msg_to_all_players(
+                                f"Flop - {[(card.number, card.suit) for card in hand.table]}"
+                            )
                             self.take_bets()
 
                             if self.gameInPlay:
@@ -416,14 +449,16 @@ class Game:
 
                 # move button player on
                 if len(self.get_players()) > 0:
-                    self.buttonPlayerIndex = (self.buttonPlayerIndex + 1) % len(self.get_players())
+                    self.buttonPlayerIndex = (self.buttonPlayerIndex + 1) % len(
+                        self.get_players()
+                    )
 
                 # print('player.hand - after reset', player.hand)
-                print('**END OF HAND**')
+                print("**END OF HAND**")
 
     def take_bets(self):
         time.sleep(0.5)
-        self.send_msg_to_all_players('POT: ' + str(self.currentPot))
+        self.send_msg_to_all_players("POT: " + str(self.currentPot))
         for player in self.activePlayers.copy():
             player.take_bet()
             if len(self.activePlayers) == 1:
@@ -434,7 +469,7 @@ class Game:
     # TODO: Calculate hand winner correctly
     def calc_hand_winner(self):
         # For now set player with the highest card to be winner
-        highest_card = Card('-1', '-1')
+        highest_card = Card("-1", "-1")
         winning_player = []
         for player in self.players:
             for card in player.hand:
@@ -448,17 +483,19 @@ class Game:
     def hand_winner(self, hand_winner):
         if len(hand_winner) == 1:
             hand_winner[0].chips += self.currentPot
-            self.send_msg_to_all_players(f'Winner is {str(hand_winner[0])}')
+            self.send_msg_to_all_players(f"Winner is {str(hand_winner[0])}")
         elif len(hand_winner) > 1:
             for player in hand_winner:
                 player.chips += int(self.currentPot / len(hand_winner))
-            self.send_msg_to_all_players(f'Split pot {[str(player) for player in hand_winner]}')
+            self.send_msg_to_all_players(
+                f"Split pot {[str(player) for player in hand_winner]}"
+            )
 
         self.currentPot = 0
         self.minimumStake = self.blind_amount
 
 
-#Dealer Class
+# Dealer Class
 class Hand:
     def __init__(self, game):
         self.table = []
@@ -470,7 +507,7 @@ class Hand:
         for player in self.game.players:
             player.add_card_to_hand(self.deck.pop())
         time.sleep(1)
-        #Second card
+        # Second card
         for player in self.game.players:
             player.add_card_to_hand(self.deck.pop())
         time.sleep(1)
@@ -495,4 +532,3 @@ class Hand:
 
 if __name__ == "__main__":
     main()
-
