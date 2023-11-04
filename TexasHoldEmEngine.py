@@ -266,7 +266,6 @@ class Player:
     def send_msg_to_player(self, msg: str):
         try:
             self.player_socket.send(msg.encode("utf-8"))
-            time.sleep(0.2)
         except ConnectionResetError as e:
             print("Player disconnected still pending remove")
             print(e)
@@ -395,7 +394,7 @@ class Game:
 
             while len(self.players) >= 2:
                 self.send_msg_to_all_players(
-                    f"Waiting for players to join game...")
+                    f"Searching for players pending to join game...")
                 time.sleep(3)
                 self.handNumber += 1
                 self.send_msg_to_all_players(f"Hand number {self.handNumber}")
@@ -477,7 +476,6 @@ class Game:
             self.gameInPlay = False
 
     def take_bets(self):
-        # time.sleep(0.2)
         self.send_msg_to_all_players("POT: " + str(self.currentPot))
         for player in self.activePlayers.copy():
             if self.gameInPlay:
@@ -523,11 +521,9 @@ class Hand:
         # First card
         for player in self.game.players:
             player.add_card_to_hand(self.deck.pop())
-        # time.sleep(0.2)
         # Second card
         for player in self.game.players:
             player.add_card_to_hand(self.deck.pop())
-        # time.sleep(0.2)
 
     def deal_river(self):
         self.deck.pop()
