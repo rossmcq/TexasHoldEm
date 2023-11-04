@@ -51,9 +51,9 @@ def main():
 
                 decode_return_message = return_message.decode("utf-8").strip()
 
-                print(decode_return_message)
+                print(":" + decode_return_message + ":")
 
-                if decode_return_message == "Do you want to [C]all or [F]old?":
+                if "Do you want to [C]all or [F]old?" in decode_return_message:
                     while True:
                         raiseflopcall = input(": ")
                         if raiseflopcall.lower() in ["c", "f", ""]:
