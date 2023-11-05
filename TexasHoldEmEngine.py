@@ -225,9 +225,7 @@ class Deck:
     def __init__(self):
         self.deck = []
 
-        for number in numbers:
-            for suit in suits:
-                self.deck.append(Card(number, suit))
+        [self.deck.append(Card(number, suit)) for suit in suits for number in numbers]
 
         random.shuffle(self.deck)
 
@@ -332,8 +330,7 @@ class Game:
     def add_player(self, player):
         self.players.append(player)
         player.game = self
-        player.player_socket.send(
-            str("GAMEID: " + str(self.gameId)).encode("utf-8"))
+        player.player_socket.send(str("GAMEID: " + str(self.gameId)).encode("utf-8"))
 
         if self.gameInPlay == 1:
             player.player_socket.send(
@@ -394,7 +391,8 @@ class Game:
 
             while len(self.players) >= 2:
                 self.send_msg_to_all_players(
-                    f"Searching for players pending to join game...")
+                    f"Searching for players pending to join game..."
+                )
                 time.sleep(3)
                 self.handNumber += 1
                 self.send_msg_to_all_players(f"Hand number {self.handNumber}")
@@ -513,9 +511,9 @@ class Game:
 # Dealer Class
 class Hand:
     def __init__(self, game):
-        self.table = []
+        self.table: list[Card] = []
         self.game: Game = game
-        self.deck = Deck()
+        self.deck: Deck = Deck()
 
     def deal_players(self):
         # First card
@@ -526,18 +524,23 @@ class Hand:
             player.add_card_to_hand(self.deck.pop())
 
     def deal_river(self):
-        self.deck.pop()
+        self.burn_card()
         self.table.append(self.deck.pop())
         self.table.append(self.deck.pop())
         self.table.append(self.deck.pop())
 
     def deal_turn(self):
-        self.deck.pop()
-        self.table.append(self.deck.pop())
+        self.burn_then_deal_one_card(self)
 
     def deal_flop(self):
-        self.deck.pop()
+        self.burn_then_deal_one_card(self)
+
+    def burn_then_deal_one_card(self):
+        self.burn_card()
         self.table.append(self.deck.pop())
+
+    def burn_card(self):
+        self.deck.pop()
 
     def reset(self):
         [player.reset_hand() for player in self.game.players]
