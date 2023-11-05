@@ -16,8 +16,20 @@ logging.basicConfig(
     format="%(asctime)s.%(msecs)03d - %(levelname)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-default_names: list[str] = ["Dave", "Scott", "Juan",
-                            "Sara", "Tracey", "Tim", "Ross", "Tina", "Rodders"]
+default_names: list[str] = [
+    "Dave",
+    "Scott",
+    "Juan",
+    "Sara",
+    "Tracey",
+    "Tim",
+    "Ross",
+    "Tina",
+    "Rodders",
+    "Sam",
+    "Paul",
+    "Jenny",
+]
 
 
 def main():
@@ -34,7 +46,7 @@ def main():
 
         if len(newPlayer) < 100:
             username = newPlayer.encode("utf-8")
-            print(f"Welcome {username}!!")
+            print(f"Welcome {newPlayer}!!")
         else:
             raise Exception("Username needs to be  < 100 characters")
 
@@ -58,8 +70,7 @@ def main():
                         raiseflopcall = input(": ")
                         if raiseflopcall.lower() in ["c", "f", ""]:
                             raiseflopcallbytes = raiseflopcall.lower().encode("utf-8")
-                            client_socket.send(
-                                username_header + raiseflopcallbytes)
+                            client_socket.send(username_header + raiseflopcallbytes)
                             break
                         else:
                             print("Please enter either F or C")
