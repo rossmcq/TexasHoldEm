@@ -1,8 +1,8 @@
-import random
-import uuid
-import time
-import socket
-import select
+from random import shuffle
+from uuid import uuid1, UUID
+from time import sleep
+from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
+from select import select
 from collections import deque
 from typing import Optional
 from _thread import start_new_thread
@@ -29,8 +29,8 @@ def main():
     pokerEngine = Main()
 
     # Create a TCP/IP socket
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_socket = socket(AF_INET, SOCK_STREAM)
+    server_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 
     # Bind to port on IP, leave IP blank to allow
     # connections from other local computers
@@ -48,9 +48,7 @@ def main():
     while True:
         # Wait for a connection
         print("waiting for a connection")
-        read_sockets, _, exception_sockets = select.select(
-            sockets_list, [], sockets_list
-        )
+        read_sockets, _, exception_sockets = select(sockets_list, [], sockets_list)
 
         for notified_socket in read_sockets:
             if notified_socket == server_socket:
@@ -68,7 +66,8 @@ def main():
                 player = Player(user["data"].decode("utf-8"), client_socket)
                 gameID = pokerEngine.add_player_to_random_game(player)
                 print(
-                    f"Accepted new connection from {client_address[0]}:{client_address[1]} username:{user['data'].decode('utf-8')} Adding them to game on thread {gameID}"
+                    f"Accepted new connection from {client_address[0]}:{client_address[1]} "
+                    f"username:{user['data'].decode('utf-8')} Adding them to game on thread {gameID}"
                 )
 
             else:
@@ -85,7 +84,8 @@ def main():
 
                 user = clients[notified_socket]
                 print(
-                    f"Received message from {user['data'].decode('utf-8')}: {message['data'].decode('utf-8')}"
+                    f"Received message from {user['data'].decode('utf-8')}"
+                    f": {message['data'].decode('utf-8')}"
                 )
 
                 for game in pokerEngine.games:
@@ -105,7 +105,7 @@ def main():
                 del clients[notified_socket]
 
 
-def recieve_message(client_socket):
+def recieve_message(client_socket: socket):
     try:
         message_header = client_socket.recv(HEADERLENGTH)
 
@@ -120,41 +120,13 @@ def recieve_message(client_socket):
         return False
 
 
-"""     
-        try:
-            print('connection from', client_address)
-
-            # Receive the name and create player and return player object back
-            while True:
-                data = connection.recv(16)
-                print('received "%s"' % data)
-                if data:
-                    print('creating player "%s"' % data.decode('utf-8'))
-                    player = Player(data.decode('utf-8'))
-                    gameID = pokerEngine.addPlayerToRandomGame(player)
-                    gameMsg = pickle.dumps(gameID)
-                    gameMsg = bytes(f"{len(gameMsg):<{HEADERSIZE}}",'utf-8') + gameMsg
-                    connection.sendall(gameMsg)
-                    print(f'{player} is joining {gameID}')
-                    player.joinGame()
-                    break
-                else:
-                    print('no more data from', client_address)
-                    break
-
-        finally:
-            # Clean up the connection
-            connection.close()
-"""
-
-
 class Main:
     MAXGAMEPLAYERS = 8
-    active = 0
+    active: bool = False
 
     def __init__(self):
-        self.games = []
-        self.active = 1
+        self.games: list[Game] = []
+        self.active: bool = True
 
     # Returns Gameid which player was added to
     def add_player_to_random_game(self, player):
@@ -208,10 +180,10 @@ class Card:
         else:
             raise Exception("Card not a standard playing card!")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.card)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return self.rank == other.rank
 
     def __lt__(self, other):
@@ -227,7 +199,7 @@ class Deck:
 
         [self.deck.append(Card(number, suit)) for suit in suits for number in numbers]
 
-        random.shuffle(self.deck)
+        shuffle(self.deck)
 
     def __str__(self):
         return str(self.deck)
@@ -241,9 +213,9 @@ class Deck:
 
 class Player:
     def __init__(self, name, player_socket):
-        self.playerid = uuid.uuid1()
-        self.player_socket: socket.socket = player_socket
-        self.name = name
+        self.playerid: UUID = uuid1()
+        self.player_socket: socket = player_socket
+        self.name: str = name
         self.chips = 1000
         self.hand = []
         self.game: Optional[Game] = None
@@ -282,7 +254,7 @@ class Player:
         self.timeout = 20
 
         while self.timeout > 0 and self.action == "u":
-            time.sleep(1)
+            sleep(1)
             self.timeout -= 1
 
         if self.timeout == 0:
@@ -317,7 +289,7 @@ class Player:
 class Game:
     def __init__(self):
         self.players: list[Player] = []
-        self.gameId = uuid.uuid1()
+        self.gameId: UUID = uuid1()
         self.gameInPlay: bool = False
         self.buttonPlayerIndex = 0
         self.activePlayers: list[Player] = []
@@ -327,7 +299,7 @@ class Game:
         self.blind_amount = 20
         self.minimumStake = self.blind_amount
 
-    def add_player(self, player):
+    def add_player(self, player: Player):
         self.players.append(player)
         player.game = self
         player.player_socket.send(str("GAMEID: " + str(self.gameId)).encode("utf-8"))
@@ -341,13 +313,13 @@ class Game:
         self.players.remove(player)
         self.send_msg_to_all_players(f"{player} left the table!")
 
-    def get_players(self):
+    def get_players(self) -> list[Player]:
         return self.players
 
-    def get_active_players(self):
+    def get_active_players(self) -> list[Player]:
         return self.activePlayers
 
-    def get_game_id(self):
+    def get_game_id(self) -> UUID:
         return self.gameId
 
     def send_msg_to_all_players(self, msg):
@@ -387,13 +359,13 @@ class Game:
                 self.send_msg_to_all_players(
                     f"You are the only player in the game, waiting for others to join..."
                 )
-                time.sleep(4)
+                sleep(4)
 
             while len(self.players) >= 2:
                 self.send_msg_to_all_players(
                     f"Searching for players pending to join game..."
                 )
-                time.sleep(3)
+                sleep(3)
                 self.handNumber += 1
                 self.send_msg_to_all_players(f"Hand number {self.handNumber}")
                 self.gameInPlay = True
