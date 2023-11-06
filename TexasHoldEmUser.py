@@ -1,9 +1,8 @@
-import socket
-import select
-import errno
 import sys
 import logging
 import os
+from socket import socket, AF_INET, SOCK_STREAM
+from errno import EWOULDBLOCK, EAGAIN
 from random import shuffle
 
 HEADERLENGTH = 10
@@ -34,7 +33,7 @@ default_names: list[str] = [
 
 def main():
     if input("Do you want to join a game of Texas Hold Em? [Y/n]") in ("Y", "y", ""):
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket = socket(AF_INET, SOCK_STREAM)
         client_socket.connect((IP, PORT))
         # client_socket.setblocking(False)
 
@@ -75,7 +74,7 @@ def main():
                         else:
                             print("Please enter either F or C")
         except IOError as e:
-            if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
+            if e.errno != EAGAIN and e.errno != EWOULDBLOCK:
                 print("reading error ", str(e))
                 sys.exit()
 
