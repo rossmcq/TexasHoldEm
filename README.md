@@ -4,7 +4,7 @@ Currently doing a bit of a tidy up after it not beeing looked at since 2019
 
 ## Run the game
 1) To start run `python3 game_engine/game_lobby.py` to start the game engine
-2) Each player can connect to the game engine by running `python3 game_engine/user.py` in a terminal.
+2) Each player can connect to the game engine by running `python3 user/user.py` in a terminal.
 3) More than one player needed to start the game. So you may need to repeat step 2 in a separate terminal.
 
 ## Limitations
