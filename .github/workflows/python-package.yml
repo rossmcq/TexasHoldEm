@@ -38,4 +38,4 @@ jobs:
         run: |
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           cd game_engine/tests/
-          python3 -m unittest
+          python3 -m unittest -v
