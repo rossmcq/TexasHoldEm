@@ -66,8 +66,10 @@ def main():
 
                 if "Do you want to [C]all or [F]old?" in decode_return_message:
                     while True:
-                        raiseflopcall = input(": ")
-                        if raiseflopcall.lower() in ["c", "f", ""]:
+                        raiseflopcall = input(": ").lower()
+                        if raiseflopcall == "":
+                            raiseflopcall = "c"
+                        if raiseflopcall in ("c", "f"):
                             raiseflopcallbytes = raiseflopcall.lower().encode("utf-8")
                             client_socket.send(username_header + raiseflopcallbytes)
                             break
