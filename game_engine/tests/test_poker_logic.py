@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock
 
-from ..poker_logic import PokerPlayer, PokerGame
+from game_engine.poker_logic import PokerPlayer, PokerGame
 
 # command to run tests:
 # python3 -m unittest game_engine/tests/test_deck.py -v

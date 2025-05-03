@@ -1,6 +1,6 @@
 import unittest
 
-from ..deck import Card, Deck
+from game_engine.deck import Card, Deck
 
 # command to run tests:
 # python3 -m unittest game_engine/tests/test_deck.py -v
