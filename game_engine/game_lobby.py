@@ -5,7 +5,7 @@ import logging
 import os
 
 # Custom libraries
-from game_engine.poker_logic import Game, Player
+from poker_logic import PokerGame, PokerPlayer
 
 HEADERLENGTH = 10
 IP = "127.0.0.1"
@@ -58,7 +58,7 @@ def main():
 
                 clients[client_socket] = user
 
-                player = Player(user["data"].decode("utf-8"), client_socket)
+                player = PokerPlayer(user["data"].decode("utf-8"), client_socket)
                 gameID = pokerEngine.add_player_to_random_game(player)
                 print(
                     f"Accepted new connection from {client_address[0]}:{client_address[1]} "
@@ -120,7 +120,7 @@ class Main:
     active: bool = False
 
     def __init__(self):
-        self.games: list[Game] = []
+        self.games: list[PokerGame] = []
         self.active: bool = True
 
     # Returns Gameid which player was added to
@@ -134,16 +134,16 @@ class Main:
             for game in self.games:
                 if len(game.get_players()) < self.MAXGAMEPLAYERS:
                     game.add_player(player)
-                    print("You are playing in game %d", game.get_game_id())
+                    print("You are playing in game %d", game.game_id())
                     gamesFull = 0
-                    return game.get_game_id()
+                    return game.game_id()
 
             # If games full then create new game and add player
             if gamesFull == 1:
                 return start_new_thread(self.create_game_and_add_player, (player,))
 
     def create_game_and_add_player(self, player):
-        game = Game()
+        game = PokerGame()
         self.games.append(game)
         game.add_player(player)
         game.play_game()

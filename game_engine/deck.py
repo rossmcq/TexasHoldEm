@@ -32,10 +32,7 @@ class Card:
 
 class Deck:
     def __init__(self):
-        self.deck = []
-
-        [self.deck.append(Card(number, suit)) for suit in suits for number in numbers]
-
+        self.deck = [Card(number, suit) for suit in suits for number in numbers]
         shuffle(self.deck)
 
     def __str__(self):
