@@ -7,7 +7,7 @@ from time import sleep
 from socket import socket
 
 # Custom
-from .deck import Deck, Card
+from game_engine.deck import Deck, Card
 
 
 class Player:
