@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock
 
-import game_engine.poker_logic as poker_logic
+from ..poker_logic import PokerPlayer, PokerGame
 
 # command to run tests:
 # python3 -m unittest game_engine/tests/test_deck.py -v
@@ -9,7 +9,7 @@ import game_engine.poker_logic as poker_logic
 
 class PlayerTest(unittest.TestCase):
     def test_player_initation(self):
-        player = poker_logic.PokerPlayer("Ross", Mock())
+        player = PokerPlayer("Ross", Mock())
 
         self.assertEqual(player.chips, 1000)
         self.assertEqual(player.hand, [])
@@ -21,7 +21,7 @@ class PlayerTest(unittest.TestCase):
 
 class PokerGameTest(unittest.TestCase):
     def test_game_initation(self):
-        game_1 = poker_logic.PokerGame()
+        game_1 = PokerGame()
 
         self.assertEqual(game_1.players, [])
         self.assertEqual(game_1.gameInPlay, False)

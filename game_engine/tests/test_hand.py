@@ -1,9 +1,9 @@
 import unittest
 from unittest.mock import Mock, call
 
-from game_engine.deck import Card, Deck
-from game_engine.poker_logic import Hand
-from game_engine.tests.test_config import test_deck
+from ..deck import Card
+from ..poker_logic import Hand
+from ..tests.test_config import test_deck
 
 # command to run tests:
 # python3 -m unittest game_engine/tests/test_hand.py -v
