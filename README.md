@@ -1,6 +1,6 @@
 # TexasHoldEm
 TexasHoldEm card game simulator that runs in Terminal
-Currently doing a bit of a tidy up after it not beeing looked at since 2019
+Still a WIP and is in need of some refactoring...
 
 ## Run the game
 1) To start run `python3 game_engine/game_lobby.py` to start the game engine
@@ -25,3 +25,6 @@ Currently doing a bit of a tidy up after it not beeing looked at since 2019
 5) HeaderString in all messages
 6) User log in/retain chips
 7) UI (I made a start refactoring to a microservice architechture with UI latest commits are on my gitlab https://gitlab.com/mcanal/texasholdem)
+
+## Run unittests
+`python3 -m unittest game_engine/tests/test_* -v`

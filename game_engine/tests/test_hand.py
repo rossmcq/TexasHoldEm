@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock, call
 
-from game_engine.deck import Card, Deck
+from game_engine.deck import Card
 from game_engine.poker_logic import Hand
 from game_engine.tests.test_config import test_deck
 

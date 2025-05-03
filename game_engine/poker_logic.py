@@ -1,19 +1,25 @@
 # Standard
+from abc import ABC, abstractmethod
 from collections import deque
 from typing import Optional
-from uuid import uuid1, UUID
+from uuid import uuid4, UUID
 from time import sleep
 from socket import socket
 
 # Custom
-from game_engine.deck import Deck, Card
+from .deck import Deck, Card
 
 
 class Player:
     def __init__(self, name, player_socket):
-        self.playerid: UUID = uuid1()
+        self.playerid: UUID = uuid4()
         self.player_socket: socket = player_socket
         self.name: str = name
+
+
+class PokerPlayer(Player):
+    def __init__(self, name, player_socket):
+        super().__init__(name, player_socket)
         self.chips = 1000
         self.hand = []
         self.game: Optional[Game] = None
@@ -84,11 +90,35 @@ class Player:
     #     self.game.player_raise(self, chips)
 
 
-class Game:
+class Game(ABC):
     def __init__(self) -> None:
         self.players: list[Player] = []
-        self.gameId: UUID = uuid1()
+        self.gameId: UUID = uuid4()
         self.gameInPlay: bool = False
+
+    @abstractmethod
+    def add_player(self, player: Player) -> None:
+        pass
+
+    @abstractmethod
+    def remove_player(self, player: Player) -> None:
+        pass
+
+    @abstractmethod
+    def send_msg_to_all_players(self, msg: str) -> None:
+        pass
+
+    # Make property?
+    def game_id(self) -> UUID:
+        return self.gameId
+
+    def get_players(self) -> list[Player]:
+        return self.players
+
+
+class PokerGame(Game):
+    def __init__(self) -> None:
+        super().__init__()
         self.buttonPlayerIndex = 0
         self.activePlayers: list[Player] = []
         self.currentPot = 0
@@ -113,14 +143,8 @@ class Game:
         self.send_msg_to_all_players(f"{player} left the table!")
         self.is_hand_won()
 
-    def get_players(self) -> list[Player]:
-        return self.players
-
     def get_active_players(self) -> list[Player]:
         return self.activePlayers
-
-    def get_game_id(self) -> UUID:
-        return self.gameId
 
     def send_msg_to_all_players(self, msg) -> None:
         [player.send_msg_to_player(msg + "\n") for player in self.players]
