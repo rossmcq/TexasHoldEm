@@ -6,43 +6,67 @@ from uuid import uuid4, UUID
 from time import sleep
 from socket import socket
 
-# Custom
+# Internal
 from game_engine.deck import Deck, Card
 
 
-class Player:
+class Player(ABC):
     def __init__(self, name, player_socket):
         self.playerid: UUID = uuid4()
         self.player_socket: socket = player_socket
-        self.name: str = name
-
-
-class PokerPlayer(Player):
-    def __init__(self, name, player_socket):
-        super().__init__(name, player_socket)
-        self.chips = 1000
-        self.hand = []
         self.game: Optional[Game] = None
-        self.timeout = 0
-        self.action = "u"
-        self.currentStake = 0
-
-    def __str__(self):
-        return f"{self.name} {str(self.chips)}"
-
-    def get_player_name(self):
-        return self.name
+        self.name: str = name
 
     def get_game(self):
         return self.game
 
     # TODO: Header String in messages
     def send_msg_to_player(self, msg: str):
+        """
+        Send a string message to the player
+
+        The message is encoded to bytes and sent to the player
+
+        Args:
+            msg (str): The message to send to the player
+        """
         try:
             self.player_socket.send(msg.encode("utf-8"))
         except ConnectionResetError as e:
             print("Player disconnected still pending remove")
             print(e)
+
+
+class CasinoPlayer(Player):
+    def __init__(self, name, player_socket):
+        super().__init__(name, player_socket)
+        self.chips = 1000
+        self.currentStake = 0
+
+    def __str__(self):
+        return f"{self.name} {str(self.chips)}"
+
+    def increase_chips(self, amount):
+        self.chips += amount
+
+    def decrease_chips(self, amount):
+        self.chips -= amount
+
+    def place_bet(self, amount):
+        self.decrease_chips(amount)
+        self.currentStake += amount
+
+    @abstractmethod
+    def take_bet(self):
+        pass
+
+
+class PokerPlayer(CasinoPlayer):
+    def __init__(self, name, player_socket):
+        super().__init__(name, player_socket)
+        self.hand = []
+        self.timeout = 0
+        self.action = "u"
 
     def add_card_to_hand(self, card):
         self.hand.append(card)
@@ -104,9 +128,8 @@ class Game(ABC):
     def remove_player(self, player: Player) -> None:
         pass
 
-    @abstractmethod
-    def send_msg_to_all_players(self, msg: str) -> None:
-        pass
+    def send_msg_to_all_players(self, msg) -> None:
+        [player.send_msg_to_player(msg + "\n") for player in self.players]
 
     # Make property?
     def game_id(self) -> UUID:
@@ -130,14 +153,14 @@ class PokerGame(Game):
     def add_player(self, player: Player) -> None:
         self.players.append(player)
         player.game = self
-        player.player_socket.send(str("GAMEID: " + str(self.gameId)).encode("utf-8"))
+        player.send_msg_to_player(str("GAMEID: " + str(self.gameId)))
 
         if self.gameInPlay == 1:
-            player.player_socket.send(
-                str("Game In Play please wait until next round starts!").encode("utf-8")
+            player.send_msg_to_player(
+                "Game In Play please wait until next round starts!"
             )
 
-    def remove_player(self, player) -> None:
+    def remove_player(self, player: Player) -> None:
         self.players.remove(player)
         self.activePlayers.remove(player)
         self.send_msg_to_all_players(f"{player} left the table!")
@@ -145,9 +168,6 @@ class PokerGame(Game):
 
     def get_active_players(self) -> list[Player]:
         return self.activePlayers
-
-    def send_msg_to_all_players(self, msg) -> None:
-        [player.send_msg_to_player(msg + "\n") for player in self.players]
 
     def player_fold(self, player) -> None:
         self.activePlayers.remove(player)
@@ -172,9 +192,8 @@ class PokerGame(Game):
             self.blind_amount,
         )
 
-    def add_chips_to_pot(self, player, amount):
-        player.chips -= amount
-        player.currentStake += amount
+    def add_chips_to_pot(self, player: PokerPlayer, amount: int):
+        player.place_bet(amount)
         self.currentPot += amount
 
     def play_game(self):
@@ -289,13 +308,13 @@ class PokerGame(Game):
                     winning_player.append(player)
         return winning_player
 
-    def hand_winner(self, hand_winner):
+    def hand_winner(self, hand_winner: list[PokerPlayer]):
         if len(hand_winner) == 1:
-            hand_winner[0].chips += self.currentPot
+            hand_winner[0].increase_chips(self.currentPot)
             self.send_msg_to_all_players(f"Winner is {str(hand_winner[0])}")
         elif len(hand_winner) > 1:
             for player in hand_winner:
-                player.chips += int(self.currentPot / len(hand_winner))
+                player.increase_chips(int(self.currentPot / len(hand_winner)))
             self.send_msg_to_all_players(
                 f"Split pot {[str(player) for player in hand_winner]}"
             )

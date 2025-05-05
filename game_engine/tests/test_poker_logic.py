@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, sentinel
 
 from game_engine.poker_logic import PokerPlayer, PokerGame
 
@@ -9,14 +9,33 @@ from game_engine.poker_logic import PokerPlayer, PokerGame
 
 class PlayerTest(unittest.TestCase):
     def test_player_initation(self):
-        player = PokerPlayer("Ross", Mock())
+        player = PokerPlayer("Ross", sentinel)
+
+        self.assertEqual(player.name, "Ross")
+        self.assertEqual(player.player_socket, sentinel)
+        self.assertEqual(player.game, None)
 
         self.assertEqual(player.chips, 1000)
         self.assertEqual(player.hand, [])
-        self.assertEqual(player.game, None)
         self.assertEqual(player.timeout, 0)
         self.assertEqual(player.action, "u")
         self.assertEqual(player.currentStake, 0)
+
+    def test_player_increase_chips(self):
+        player = PokerPlayer("Ross", sentinel)
+        player.increase_chips(100)
+        self.assertEqual(player.chips, 1100)
+
+    def test_player_decrease_chips(self):
+        player = PokerPlayer("Ross", sentinel)
+        player.decrease_chips(100)
+        self.assertEqual(player.chips, 900)
+
+    def test_player_place_bet(self):
+        player = PokerPlayer("Ross", sentinel)
+        player.place_bet(100)
+        self.assertEqual(player.chips, 900)
+        self.assertEqual(player.currentStake, 100)
 
 
 class PokerGameTest(unittest.TestCase):
