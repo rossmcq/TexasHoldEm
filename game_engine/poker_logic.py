@@ -22,6 +22,14 @@ class Player(ABC):
 
     # TODO: Header String in messages
     def send_msg_to_player(self, msg: str):
+        """
+        Send a string message to the player
+
+        The message is encoded to bytes and sent to the player
+
+        Args:
+            msg (str): The message to send to the player
+        """
         try:
             self.player_socket.send(msg.encode("utf-8"))
         except ConnectionResetError as e:
@@ -47,6 +55,10 @@ class CasinoPlayer(Player):
     def place_bet(self, amount):
         self.decrease_chips(amount)
         self.currentStake += amount
+
+    @abstractmethod
+    def take_bet(self):
+        pass
 
 
 class PokerPlayer(CasinoPlayer):
@@ -116,9 +128,8 @@ class Game(ABC):
     def remove_player(self, player: Player) -> None:
         pass
 
-    @abstractmethod
-    def send_msg_to_all_players(self, msg: str) -> None:
-        pass
+    def send_msg_to_all_players(self, msg) -> None:
+        [player.send_msg_to_player(msg + "\n") for player in self.players]
 
     # Make property?
     def game_id(self) -> UUID:
@@ -142,14 +153,14 @@ class PokerGame(Game):
     def add_player(self, player: Player) -> None:
         self.players.append(player)
         player.game = self
-        player.player_socket.send(str("GAMEID: " + str(self.gameId)).encode("utf-8"))
+        player.send_msg_to_player(str("GAMEID: " + str(self.gameId)))
 
         if self.gameInPlay == 1:
-            player.player_socket.send(
-                str("Game In Play please wait until next round starts!").encode("utf-8")
+            player.send_msg_to_player(
+                "Game In Play please wait until next round starts!"
             )
 
-    def remove_player(self, player) -> None:
+    def remove_player(self, player: Player) -> None:
         self.players.remove(player)
         self.activePlayers.remove(player)
         self.send_msg_to_all_players(f"{player} left the table!")
@@ -157,9 +168,6 @@ class PokerGame(Game):
 
     def get_active_players(self) -> list[Player]:
         return self.activePlayers
-
-    def send_msg_to_all_players(self, msg) -> None:
-        [player.send_msg_to_player(msg + "\n") for player in self.players]
 
     def player_fold(self, player) -> None:
         self.activePlayers.remove(player)

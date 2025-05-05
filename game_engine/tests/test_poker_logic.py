@@ -21,6 +21,22 @@ class PlayerTest(unittest.TestCase):
         self.assertEqual(player.action, "u")
         self.assertEqual(player.currentStake, 0)
 
+    def test_player_increase_chips(self):
+        player = PokerPlayer("Ross", sentinel)
+        player.increase_chips(100)
+        self.assertEqual(player.chips, 1100)
+
+    def test_player_decrease_chips(self):
+        player = PokerPlayer("Ross", sentinel)
+        player.decrease_chips(100)
+        self.assertEqual(player.chips, 900)
+
+    def test_player_place_bet(self):
+        player = PokerPlayer("Ross", sentinel)
+        player.place_bet(100)
+        self.assertEqual(player.chips, 900)
+        self.assertEqual(player.currentStake, 100)
+
 
 class PokerGameTest(unittest.TestCase):
     def test_game_initation(self):
